@@ -117,3 +117,6 @@ if __name__ == '__main__':
         json.dump(updated_data, file, indent=4)
     
     print("JSON file has been updated with new dictionary names and values.")
+
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port, debug=True)
