@@ -41,9 +41,9 @@ logger.addHandler(handler)
 def predict():
     request_data = request.get_json()
     text = request_data.get('text', '')
-
+    
     logger.warning(json.dumps({'event': 'received_text', 'text': text}))
-
+    
     with torch.no_grad():
         outputs = classifier_pipeline(text)
         output = {}
@@ -52,10 +52,10 @@ def predict():
             del item['start']
             del item['end']
             output[f"word-{i}"] = item
-
+        
         json_out = json.dumps(output)
         logger.warning(json.dumps({'event': 'outputs', 'json_out': json_out}))
-
+        
     return jsonify(output)
 
 if __name__ == '__main__':
