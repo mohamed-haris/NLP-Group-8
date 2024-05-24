@@ -31,7 +31,7 @@ app = Flask(__name__)
 
 # Setup structured logging
 logger = logging.getLogger('BERT_NER_Predictions')
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 handler = logging.FileHandler('app.log')
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
@@ -41,10 +41,9 @@ logger.addHandler(handler)
 def predict():
     request_data = request.get_json()
     text = request_data.get('text', '')
-    
-    # Log the received text
-    logger.info(json.dumps({'event': 'received_text', 'text': text}))
-    
+
+    logger.warning(json.dumps({'event': 'received_text', 'text': text}))
+
     with torch.no_grad():
         outputs = classifier_pipeline(text)
         output = {}
@@ -53,10 +52,10 @@ def predict():
             del item['start']
             del item['end']
             output[f"word-{i}"] = item
-        
+
         json_out = json.dumps(output)
-        logger.info(json.dumps({'event': 'outputs', 'json_out': json_out}))
-        
+        logger.warning(json.dumps({'event': 'outputs', 'json_out': json_out}))
+
     return jsonify(output)
 
 if __name__ == '__main__':
