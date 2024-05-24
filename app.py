@@ -1,27 +1,33 @@
-from flask import Flask, render_template, request, redirect, url_for
-from joblib import load
-from transformers import AutoTokenizer, AutoModelForTokenClassification
-from transformers import pipeline
-import torch # the main pytorch library
-import torch.nn as nn # the sub-library containing Softmax, Module and other useful functions
-import torch.optim as optim #
+from flask import Flask, request, jsonify
+from transformers import AutoTokenizer, AutoModelForTokenClassification, pipeline
+import torch
 import logging
+import os
 import json
+import gdown
+import zipfile
 
 MODEL_OF_CHOICE = "BERT"
+file_id = '1Fa1CdPZTrhwjSPEZJTBQN_BI4SW3uHG9'
+model_url = f'https://drive.google.com/uc?id={file_id}'
+local_zip_path = 'bert_model.pth.zip'
+local_model_dir = 'bert_model.pth'
 
+if not os.path.exists(local_model_dir):
+    gdown.download(model_url, local_zip_path, quiet=False)
+    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+        zip_ref.extractall()
 
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
-#models = AutoModelForTokenClassification.from_pretrained("D:\\NLP\\group\\bert_new_model_1.pth")
+model = AutoModelForTokenClassification.from_pretrained(local_model_dir)
 classifier_pipeline = pipeline(
     "token-classification",
-    model="D:\\NLP\\group\\bert_new_model_1.pth",
+    model=model,
     tokenizer=tokenizer,
-    
     aggregation_strategy='max'
 )
-#classifier_pipeline = load('text_classification.joblib')
-app = Flask(__name__)    
+
+app = Flask(__name__)
 
 # Setup structured logging
 logger = logging.getLogger('BERT_NER_Predictions')
@@ -31,26 +37,27 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
-@app.route('/predict',methods = ['POST'])
+@app.route('/predict', methods=['POST'])
 def predict():
-    #methods = ['POST']
     request_data = request.get_json()
-    text = request_data.get('text','')
+    text = request_data.get('text', '')
     
     # Log the received text
     logger.info(json.dumps({'event': 'received_text', 'text': text}))
-    #return jsonify(text)
-    print(text)
-    
-    
     
     with torch.no_grad():
         outputs = classifier_pipeline(text)
-        json_out = json.dumps(str(outputs))
-        print(json_out) 
+        output = {}
+        for i, item in enumerate(outputs):
+            del item['score']
+            del item['start']
+            del item['end']
+            output[f"word-{i}"] = item
+        
+        json_out = json.dumps(output)
         logger.info(json.dumps({'event': 'outputs', 'json_out': json_out}))
-      
-    return (json_out)
+        
+    return jsonify(output)
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
