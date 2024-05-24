@@ -14,12 +14,11 @@ model_url = f'https://drive.google.com/uc?id={file_id}'
 local_zip_path = 'bert_model.pth.zip'
 local_model_dir = 'bert_model.pth'
 
-def download_and_extract_model():
-    if not os.path.exists(local_model_dir):
-        gdown.download(model_url, local_zip_path, quiet=False)
-        with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
-            zip_ref.extractall()
-        os.remove(local_zip_path)
+if not os.path.exists(local_model_dir):
+    gdown.download(model_url, local_zip_path, quiet=False)
+    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+        zip_ref.extractall()
+    os.remove(local_zip_path)
 
 def replace_in_keys_and_values(data, replacements):
     if isinstance(data, dict):
@@ -99,7 +98,6 @@ def predict():
     return jsonify(output)
 
 if __name__ == '__main__':
-    download_and_extract_model()
 
     config_path = os.path.join(local_model_dir, 'config.json')
 
@@ -119,5 +117,3 @@ if __name__ == '__main__':
         json.dump(updated_data, file, indent=4)
     
     print("JSON file has been updated with new dictionary names and values.")
-
-    app.run(host='0.0.0.0', port=8080, debug=True)
