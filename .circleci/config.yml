@@ -1,34 +1,35 @@
-# This config was automatically generated from your source code
-# Stacks detected: deps:python:.
 version: 2.1
 orbs:
-  python: circleci/python@2
+  python: circleci/python@2.1.1
+
 jobs:
-  test-python:
-    # Install dependencies and run tests
+  setup:
     docker:
-      - image: cimg/python:3.8-node
+      - image: cimg/python:3.8
     steps:
       - checkout
-      - python/install-packages
+      - python/install-packages:
+          pkg-manager: pip
+          requirements: "requirements.txt"
       - run:
-          name: Run tests
-          command: pytest --junitxml=junit.xml || ((($? == 5)) && echo 'Did not find any tests to run.')
+          name: Run Flask App
+          command: python app.py &
+      - run:
+          name: Wait for Flask App to Start
+          command: sleep 10  # wait for the app to start
+      - run:
+          name: Run Tests
+          command: |
+            curl --request POST \
+            --url http://localhost:5000/predict \
+            --header 'Content-Type: application/json' \
+            --data '{"text": "Sample text for testing."}' | tee result.json
+      - store_artifacts:
+          path: result.json
       - store_test_results:
-          path: junit.xml
-  deploy:
-    # This is an example deploy job, not actually used by the workflow
-    docker:
-      - image: cimg/base:stable
-    steps:
-      # Replace this with steps to deploy to users
-      - run:
-          name: deploy
-          command: '#e.g. ./deploy.sh'
+          path: result.json
+
 workflows:
   build-and-test:
     jobs:
-      - test-python
-    # - deploy:
-    #     requires:
-    #       - test-python
+      - setup
