@@ -10,28 +10,13 @@ import zipfile
 MODEL_OF_CHOICE = "BERT"
 file_id = '1Fa1CdPZTrhwjSPEZJTBQN_BI4SW3uHG9'
 model_url = f'https://drive.google.com/uc?id={file_id}'
-local_zip_path = 'bert_model.zip'
+local_zip_path = 'bert_model.pth.zip'
 local_model_dir = 'bert_model.pth'
 
-def download_and_extract_model():
-    if not os.path.exists(local_model_dir):
-        gdown.download(model_url, local_zip_path, quiet=False)
-        with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
-            zip_ref.extractall()
-        os.remove(local_zip_path)
-
-app = Flask(__name__)
-
-@app.before_first_request
-def setup():
-    download_and_extract_model()
-
-logger = logging.getLogger('BERT_NER_Predictions')
-logger.setLevel(logging.ERROR)
-handler = logging.FileHandler('app.log')
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+if not os.path.exists(local_model_dir):
+    gdown.download(model_url, local_zip_path, quiet=False)
+    with zipfile.ZipFile(local_zip_path, 'r') as zip_ref:
+        zip_ref.extractall()
 
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
 model = AutoModelForTokenClassification.from_pretrained(local_model_dir)
@@ -42,6 +27,16 @@ classifier_pipeline = pipeline(
     aggregation_strategy='max'
 )
 
+app = Flask(__name__)
+
+# Setup structured logging
+logger = logging.getLogger('BERT_NER_Predictions')
+logger.setLevel(logging.WARNING)
+handler = logging.FileHandler('app.log')
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
 @app.route('/')
 def index():
     return "Hello from Group 8 NLP team!"
@@ -51,7 +46,7 @@ def predict():
     request_data = request.get_json()
     text = request_data.get('text', '')
 
-    logger.error(json.dumps({'event': 'received_text', 'text': text}))
+    logger.warning(json.dumps({'event': 'received_text', 'text': text}))
 
     with torch.no_grad():
         outputs = classifier_pipeline(text)
@@ -63,7 +58,7 @@ def predict():
             output[f"word-{i}"] = item
 
         json_out = json.dumps(output)
-        logger.error(json.dumps({'event': 'outputs', 'json_out': json_out}))
+        logger.warning(json.dumps({'event': 'outputs', 'json_out': json_out}))
 
     return jsonify(output)
 
