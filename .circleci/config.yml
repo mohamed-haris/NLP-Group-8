@@ -8,18 +8,24 @@ jobs:
       - image: cimg/python:3.8
     steps:
       - checkout
-      - python/install-packages:
-          pkg-manager: pip
-          requirements: "requirements.txt"
+      - run:
+          name: Install dependencies
+          command: |
+            python -m venv venv
+            . venv/bin/activate
+            pip install -r requirements.txt
       - run:
           name: Run Flask App
-          command: python app.py &
+          command: |
+            . venv/bin/activate
+            python app.py &
       - run:
           name: Wait for Flask App to Start
           command: sleep 10  # wait for the app to start
       - run:
           name: Run Tests
           command: |
+            . venv/bin/activate
             curl --request POST \
             --url http://localhost:5000/predict \
             --header 'Content-Type: application/json' \
